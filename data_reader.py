@@ -50,5 +50,8 @@ game_info_train = cur.fetchall()
 res = cur.execute("SELECT * FROM game_info WHERE date >= " + train_test_date_cutoff)
 game_info_test = cur.fetchall()
 
+res = cur.execute("SELECT * FROM game_info")
+game_info = cur.fetchall()
+
 
 con.close()

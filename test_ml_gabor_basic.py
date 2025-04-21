@@ -3,22 +3,31 @@ from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
 import torch.nn as nn
 import torch.optim as optim
-from data_reader import game_info_train, game_info_test
+from data_reader import game_info_train, game_info_test, game_info
 
 #print(len(game_info_train))
 #print(len(game_info_test))
 
-class GameInfoDataset(Dataset):
-  def _one_hot_encode_str_array(self, array):
+class TeamNameMapping:
+  def __init__(self, array):
     values = set(array)
-    name_to_int_mapping = {team_name: i for i, team_name in enumerate(values)}
+    self._name_to_int_mapping = {team_name: i for i, team_name in enumerate(values)}
+
+  def get_team_name_to_int_mapping(self):
+    return self._name_to_int_mapping
+
+class GameInfoDataset(Dataset):
+  def _one_hot_encode_str_array(self, array, team_name_mapping):
+    #values = set(array)
+    #name_to_int_mapping = {team_name: i for i, team_name in enumerate(values)}
+    name_to_int_mapping = team_name_mapping.get_team_name_to_int_mapping()
     array_int = [name_to_int_mapping[i] for i in array]
     int_tensor = torch.tensor(array_int)
     return F.one_hot(int_tensor)
 
-  def __init__(self, data):
-    team_1 = self._one_hot_encode_str_array([elem[3] for elem in data])
-    team_2 = self._one_hot_encode_str_array([elem[5] for elem in data])
+  def __init__(self, data, team_name_mapping):
+    team_1 = self._one_hot_encode_str_array([elem[3] for elem in data], team_name_mapping)
+    team_2 = self._one_hot_encode_str_array([elem[5] for elem in data], team_name_mapping)
     self.features = torch.cat((team_1, team_2), dim=1).float()
     self.labels = torch.tensor([elem[7] for elem in data]).float()
   
@@ -27,11 +36,13 @@ class GameInfoDataset(Dataset):
   
   def __getitem__(self, idx):
     return self.features[idx], self.labels[idx]
+  
+team_name_mapping = TeamNameMapping([elem[3] for elem in game_info])
 
-game_info_train_dataset = GameInfoDataset(game_info_train)
+game_info_train_dataset = GameInfoDataset(game_info_train, team_name_mapping)
 game_info_trainloader = DataLoader(game_info_train_dataset, batch_size=32)
 
-game_info_test_dataset = GameInfoDataset(game_info_test)
+game_info_test_dataset = GameInfoDataset(game_info_test, team_name_mapping)
 game_info_testloader = DataLoader(game_info_test_dataset, batch_size=32)
 
 #print(game_info_train_dataset[0][0].shape[0])
@@ -68,18 +79,18 @@ for epoch in range(300):
   if epoch % 20 == 0:
     print("Training Loss: " + str(total_loss/num_batches))
 
-    #TODO: fix one hot encoding dimensions not matching between training and test data
-    #model.eval()
-    #with torch.no_grad():
-    #  total_loss = 0
-    #  num_batches = 0
-    #  for data in game_info_testloader:
-    #    inputs, labels = data[0], data[1]
-    #    labels = labels.unsqueeze(1)
-    #    outputs = model(inputs)
-    #    loss = criterion(outputs, labels)
-    #    total_loss += loss.item()
-    #  print("Testing loss: " + str(total_loss/num_batches))
+    model.eval()
+    with torch.no_grad():
+      total_loss = 0
+      num_batches = 0
+      for data in game_info_testloader:
+        inputs, labels = data[0], data[1]
+        labels = labels.unsqueeze(1)
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+        total_loss += loss.item()
+        num_batches += 1
+      print("Testing loss: " + str(total_loss/num_batches))
 
 print("Baseline")
 
