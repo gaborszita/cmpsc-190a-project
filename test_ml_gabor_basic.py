@@ -1,3 +1,43 @@
+# Results:
+# Model overfitting to training data
+# Output:
+"""
+Training model
+Training Loss: 0.679893541867566
+Testing loss: 0.6856811535163004
+Training Loss: 0.6470041747685451
+Testing loss: 0.7074899077415466
+Training Loss: 0.6352838334763885
+Testing loss: 0.7078959795295215
+Training Loss: 0.6259139370956238
+Testing loss: 0.7156758484293203
+Training Loss: 0.6219063683110437
+Testing loss: 0.7251520557481734
+Training Loss: 0.6203936687700308
+Testing loss: 0.7316868021839955
+Training Loss: 0.6199705934828255
+Testing loss: 0.7372676358848321
+Training Loss: 0.6196476224881069
+Testing loss: 0.7404001550596269
+Training Loss: 0.6193083236171941
+Testing loss: 0.7428764622719561
+Training Loss: 0.6190193068639488
+Testing loss: 0.7442939916595084
+Training Loss: 0.6187807997320868
+Testing loss: 0.7456094671468265
+Training Loss: 0.6186096605601584
+Testing loss: 0.7474287640853007
+Training Loss: 0.6184562035616795
+Testing loss: 0.7484454307399813
+Training Loss: 0.6182791941864475
+Testing loss: 0.7493587214438642
+Training Loss: 0.6181602636530141
+Testing loss: 0.7500836673330088
+Baseline
+All zeros loss: tensor(0.6931)
+All ones loss: tensor(0.8466)
+"""
+
 import torch
 from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
