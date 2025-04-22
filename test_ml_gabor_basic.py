@@ -1,3 +1,6 @@
+# This program uses only the away_team and home_team information
+# about a game to predict the winner
+
 # Results:
 # Model overfitting to training data
 # Output:
@@ -43,18 +46,8 @@ from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
 import torch.nn as nn
 import torch.optim as optim
-from data_reader import game_info_train, game_info_test, game_info
-
-#print(len(game_info_train))
-#print(len(game_info_test))
-
-class TeamNameMapping:
-  def __init__(self, array):
-    values = set(array)
-    self._name_to_int_mapping = {team_name: i for i, team_name in enumerate(values)}
-
-  def get_team_name_to_int_mapping(self):
-    return self._name_to_int_mapping
+from data_reader import game_info
+from team_name_mapping import TeamNameMapping
 
 class GameInfoDataset(Dataset):
   def _one_hot_encode_str_array(self, array, team_name_mapping):
@@ -76,6 +69,10 @@ class GameInfoDataset(Dataset):
   
   def __getitem__(self, idx):
     return self.features[idx], self.labels[idx]
+
+split_idx = int(len(game_info) * 0.8)
+game_info_train = game_info[:split_idx]
+game_info_test = game_info[split_idx:]
   
 team_name_mapping = TeamNameMapping([elem[3] for elem in game_info])
 
@@ -132,6 +129,8 @@ for epoch in range(300):
         num_batches += 1
       print("Testing loss: " + str(total_loss/num_batches))
 
+# Calculate baseline loss - we calculate how much the loss is by
+# always predicting 0 and always predicting 1
 print("Baseline")
 
 def tensor_of_zeros(x):

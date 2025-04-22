@@ -8,14 +8,7 @@ import torch.optim as optim
 from data_reader import game_info_detailed
 import random
 import matplotlib.pyplot as plt
-
-class TeamNameMapping:
-  def __init__(self, array):
-    values = set(array)
-    self._name_to_int_mapping = {team_name: i for i, team_name in enumerate(values)}
-
-  def get_team_name_to_int_mapping(self):
-    return self._name_to_int_mapping
+from team_name_mapping import TeamNameMapping
 
 class GameInfoDataset(Dataset):
   def _one_hot_encode_str_array(self, array, team_name_mapping):
@@ -115,6 +108,8 @@ for epoch in range(200):
       testing_losses.append(testing_loss)
       print("Testing loss: " + str(testing_loss))
 
+# Calculate baseline loss - we calculate how much the loss is by
+# always predicting 0 and always predicting 1
 print("Baseline")
 
 def tensor_of_zeros(x):
