@@ -19,17 +19,18 @@ class GameInfoDataset(Dataset):
     int_tensor = torch.tensor(array_int)
     return F.one_hot(int_tensor)
 
-  def __init__(self, data, team_name_mapping):
+  def __init__(self, data, team_name_mapping, min_vals, max_vals):
     team_1 = self._one_hot_encode_str_array([elem[1] for elem in data], team_name_mapping)
     team_2 = self._one_hot_encode_str_array([elem[2] for elem in data], team_name_mapping)
     data_rest = torch.tensor([elem[3:] for elem in data])
-    mean_vals = data_rest.mean(dim=0)
-    std_vals = data_rest.std(dim=0)
-    min_vals = data_rest.min(dim=0).values
-    max_vals = data_rest.max(dim=0).values
+    #mean_vals = data_rest.mean(dim=0)
+    #std_vals = data_rest.std(dim=0)
+    #min_vals = data_rest.min(dim=0).values
+    #max_vals = data_rest.max(dim=0).values
     #data_rest = (data_rest - mean_vals) / std_vals
     data_rest = (data_rest - min_vals) / (max_vals - min_vals)
-    self.features = torch.cat((team_1, team_2, data_rest), dim=1).float()
+    #self.features = torch.cat((team_1, team_2, data_rest), dim=1).float()
+    self.features = data_rest
     self.labels = torch.tensor([elem[0] for elem in data]).float()
   
   def __len__(self):
@@ -50,17 +51,19 @@ test_data = game_info_detailed[split_idx:]
 print("Training data length: " + str(len(train_data)))
 print("Test data length: " + str(len(test_data)))
 
-train_dataset = GameInfoDataset(train_data, team_name_mapping)
-test_dataset = GameInfoDataset(test_data, team_name_mapping)
+data_rest = torch.tensor([elem[3:] for elem in game_info_detailed])
+min_vals = data_rest.min(dim=0).values
+max_vals = data_rest.max(dim=0).values
+
+train_dataset = GameInfoDataset(train_data, team_name_mapping, min_vals, max_vals)
+test_dataset = GameInfoDataset(test_data, team_name_mapping, min_vals, max_vals)
 
 batch_size = 32
 train_loader = DataLoader(train_dataset, batch_size=32)
 test_loader = DataLoader(test_dataset, batch_size=32)
 
 model = nn.Sequential(
-  nn.Linear(train_dataset[0][0].shape[0], 32),
-  nn.ReLU(),
-  nn.Linear(32, 1)
+  nn.Linear(train_dataset[0][0].shape[0], 1)
 )
 
 
@@ -95,18 +98,20 @@ for epoch in range(200):
 
     model.eval()
     with torch.no_grad():
-      total_loss = 0
-      num_batches = 0
-      for data in test_loader:
-        inputs, labels = data[0], data[1]
-        labels = labels.unsqueeze(1)
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        total_loss += loss.item()
-        num_batches += 1
-      testing_loss = total_loss/num_batches
-      testing_losses.append(testing_loss)
-      print("Testing loss: " + str(testing_loss))
+        total_loss = 0
+        correct = 0
+        total = 0
+        for inputs, labels in test_loader:
+            labels = labels.unsqueeze(1)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            total_loss += loss.item()
+
+            predictions = (torch.sigmoid(outputs) > 0.5).float()
+            correct += (predictions == labels).sum().item()
+            total += labels.size(0)
+        
+        print(f"Testing Loss: {total_loss / len(test_loader):.4f}, Accuracy: {correct / total:.2%}")
 
 # Calculate baseline loss - we calculate how much the loss is by
 # always predicting 0 and always predicting 1
@@ -120,20 +125,36 @@ def tensor_of_ones(x):
 
 total_loss = 0
 num_batches = 0
-for data in train_loader:
+correct = 0
+total = 0
+for inputs, labels in test_loader:
+  labels = labels.unsqueeze(1)
   outputs = tensor_of_zeros(inputs)
   loss = criterion(outputs, labels)
-  total_loss += loss
+  total_loss += loss.item()
   num_batches += 1
+
+  predictions = (torch.sigmoid(outputs) > 0.5).float()
+  correct += (predictions == labels).sum().item()
+  total += labels.size(0)
+print(f"All zeros accuracy: {correct / total:.2%}")
 print("All zeros loss: " + str(total_loss/num_batches))
 
 total_loss = 0
 num_batches = 0
-for data in train_loader:
+correct = 0
+total = 0
+for inputs, labels in test_loader:
+  labels = labels.unsqueeze(1)
   outputs = tensor_of_ones(inputs)
   loss = criterion(outputs, labels)
-  total_loss += loss
+  total_loss += loss.item()
   num_batches += 1
+
+  predictions = (torch.sigmoid(outputs) > 0.5).float()
+  correct += (predictions == labels).sum().item()
+  total += labels.size(0)
+print(f"All ones accuracy: {correct / total:.2%}")
 print("All ones loss: " + str(total_loss/num_batches))
 
 plot = False

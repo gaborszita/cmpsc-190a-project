@@ -7,6 +7,7 @@
 import sqlite3
 import os
 import csv
+from itertools import islice
 
 con = sqlite3.connect('NBA-Web-Scraper/data/NBA-Boxscore-Database.sqlite')
 cur = con.cursor()
@@ -66,5 +67,96 @@ if not os.path.exists(game_info_detailed_path):
 with open(game_info_detailed_path, 'r', newline='') as file:
   reader = csv.reader(file)
   game_info_detailed = [[int(row[0]), row[1], row[2]] + [float(elem) for elem in row[3:]] for row in reader]
+
+game_info_detailed_2_path = "cache_data/game_info_2_detailed.csv"
+
+if not os.path.exists(game_info_detailed_2_path):
+  res = cur.execute("""
+                    SELECT 
+                        gi.result,
+                        gi.away_team,
+                        gi.home_team,
+
+                        -- Home team four factors
+                        (SELECT AVG(ts."eFG%") FROM team_stats ts 
+                        JOIN game_info gi2 ON ts.game_id = gi2.game_id 
+                        WHERE (gi2.home_team = gi.home_team OR gi2.away_team = gi.home_team) 
+                          AND ts.team = gi.home_team 
+                          AND gi2.date < gi.date 
+                        ORDER BY gi2.date DESC LIMIT 10) AS home_eFG,
+
+                        (SELECT AVG(ts."TOV%") FROM team_stats ts 
+                        JOIN game_info gi2 ON ts.game_id = gi2.game_id 
+                        WHERE (gi2.home_team = gi.home_team OR gi2.away_team = gi.home_team) 
+                          AND ts.team = gi.home_team 
+                          AND gi2.date < gi.date 
+                        ORDER BY gi2.date DESC LIMIT 10) AS home_TOV,
+
+                        (SELECT AVG(ts."ORB%") FROM team_stats ts 
+                        JOIN game_info gi2 ON ts.game_id = gi2.game_id 
+                        WHERE (gi2.home_team = gi.home_team OR gi2.away_team = gi.home_team) 
+                          AND ts.team = gi.home_team 
+                          AND gi2.date < gi.date 
+                        ORDER BY gi2.date DESC LIMIT 10) AS home_ORB,
+
+                        (SELECT AVG(ts."FGA") FROM team_stats ts 
+                        JOIN game_info gi2 ON ts.game_id = gi2.game_id 
+                        WHERE (gi2.home_team = gi.home_team OR gi2.away_team = gi.home_team) 
+                          AND ts.team = gi.home_team 
+                          AND gi2.date < gi.date 
+                        ORDER BY gi2.date DESC LIMIT 10) AS home_FT_FGA,
+
+                        -- Away team four factors
+                        (SELECT AVG(ts."eFG%") FROM team_stats ts 
+                        JOIN game_info gi2 ON ts.game_id = gi2.game_id 
+                        WHERE (gi2.home_team = gi.away_team OR gi2.away_team = gi.away_team) 
+                          AND ts.team = gi.away_team 
+                          AND gi2.date < gi.date 
+                        ORDER BY gi2.date DESC LIMIT 10) AS away_eFG,
+
+                        (SELECT AVG(ts."TOV%") FROM team_stats ts 
+                        JOIN game_info gi2 ON ts.game_id = gi2.game_id 
+                        WHERE (gi2.home_team = gi.away_team OR gi2.away_team = gi.away_team) 
+                          AND ts.team = gi.away_team 
+                          AND gi2.date < gi.date 
+                        ORDER BY gi2.date DESC LIMIT 10) AS away_TOV,
+
+                        (SELECT AVG(ts."ORB%") FROM team_stats ts 
+                        JOIN game_info gi2 ON ts.game_id = gi2.game_id 
+                        WHERE (gi2.home_team = gi.away_team OR gi2.away_team = gi.away_team) 
+                          AND ts.team = gi.away_team 
+                          AND gi2.date < gi.date 
+                        ORDER BY gi2.date DESC LIMIT 10) AS away_ORB,
+
+                        (SELECT AVG(ts."FGA") FROM team_stats ts 
+                        JOIN game_info gi2 ON ts.game_id = gi2.game_id 
+                        WHERE (gi2.home_team = gi.away_team OR gi2.away_team = gi.away_team) 
+                          AND ts.team = gi.away_team 
+                          AND gi2.date < gi.date 
+                        ORDER BY gi2.date DESC LIMIT 10) AS away_FT_FGA
+
+                    FROM game_info gi
+                    ORDER BY gi.date;
+                    """)
+  
+  game_info_detailed_2 = cur.fetchall()
+
+  with open(game_info_detailed_2_path, 'w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerows(game_info_detailed_2)
+
+game_info_detailed_2 = []
+
+with open(game_info_detailed_2_path, 'r', newline='') as file:
+  reader = csv.reader(file)
+  counter = 0
+  for row in reader:
+    if counter > 50:
+      try:
+        game_info_detailed_2.append([int(row[0]), row[1], row[2]] + [float(elem) for elem in row[3:]])
+      except:
+        pass
+    counter += 1
+  #game_info_detailed_2 = [[int(row[0]), row[1], row[2]] + [float(elem) for elem in row[3:]] for row in islice(reader, 100, None)]
 
 con.close()
