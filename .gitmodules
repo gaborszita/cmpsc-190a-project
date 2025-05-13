@@ -1,3 +1,6 @@
 [submodule "NBA-Web-Scraper"]
 	path = NBA-Web-Scraper
 	url = https://github.com/luke-lite/NBA-Web-Scraper.git
+[submodule "NBA-Prediction-Modeling"]
+	path = NBA-Prediction-Modeling
+	url = https://github.com/luke-lite/NBA-Prediction-Modeling.git
