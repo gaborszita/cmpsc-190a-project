@@ -178,5 +178,8 @@ cython_debug/
 # VS Code
 .vscode
 
+# macOS system files
+.DS_Store
+
 # data cache
 cache_data/
