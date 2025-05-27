@@ -180,3 +180,4 @@ cython_debug/
 
 # data cache
 cache_data/
+cache_data_2/

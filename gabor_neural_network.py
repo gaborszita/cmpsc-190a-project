@@ -9,7 +9,18 @@ from matplotlib import pyplot as plt
 
 class GameDataSet(Dataset):
   def __init__(self, data):
-    self.features = data[['a_eFGp', 'a_FTr', 'a_ORBp', 'a_TOVp', 'h_eFGp', 'h_FTr', 'h_ORBp', 'h_TOVp']]
+    limit = 10
+    stat_columns = (
+        [f'a_eFGp_{i+1}' for i in range(limit)] +
+        [f'a_FTr_{i+1}' for i in range(limit)] +
+        [f'a_ORBp_{i+1}' for i in range(limit)] +
+        [f'a_TOVp_{i+1}' for i in range(limit)] +
+        [f'h_eFGp_{i+1}' for i in range(limit)] +
+        [f'h_FTr_{i+1}' for i in range(limit)] +
+        [f'h_ORBp_{i+1}' for i in range(limit)] +
+        [f'h_TOVp_{i+1}' for i in range(limit)]
+    )
+    self.features = data[stat_columns]
     self.labels = data['result']
 
   def __len__(self):
@@ -20,7 +31,7 @@ class GameDataSet(Dataset):
     y = torch.tensor(self.labels.iloc[idx], dtype=torch.float32)
     return x, y
 
-team_factor_10 = pd.read_csv('NBA-Prediction-Modeling/data/team_factor_10.csv', index_col=0)
+team_factor_10 = pd.read_csv('cache_data_2/team_factor_individual_10.csv', index_col=0)
 team_factor_10.dropna(inplace=True)
 
 print("Data length: " + str(len(team_factor_10)))
@@ -38,7 +49,10 @@ test_loader = DataLoader(test_dataset, batch_size=32)
 
 
 model = nn.Sequential(
-  nn.Linear(train_dataset[0][0].shape[0], 1),
+  nn.Linear(train_dataset[0][0].shape[0], 64),
+  nn.LeakyReLU(negative_slope=0.01),
+  nn.Dropout(p=0.5),
+  nn.Linear(64, 1)
 )
 
 
@@ -51,7 +65,7 @@ training_accuracies = []
 testing_accuracies = []
 epochs = []
 
-for epoch in range(300):
+for epoch in range(100):
   model.train()
 
   total_loss = 0
