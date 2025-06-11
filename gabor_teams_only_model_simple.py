@@ -119,6 +119,11 @@ if plot:
 
   plt.plot(x, y1, label="Training Accuracy")
   plt.plot(x, y2, label="Testing Accuracy")
-  plt.legend()
+  
+  plt.xlabel("Epochs", fontsize=14)
+  plt.ylabel("Accuracy", fontsize=14)
+  plt.xticks(fontsize=13)
+  plt.yticks(fontsize=13)
+  plt.legend(fontsize=13)
 
   plt.show()
