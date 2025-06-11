@@ -15,7 +15,7 @@ import numpy as np
 # https://www.kaggle.com/code/kanncaa1/recurrent-neural-network-with-pytorch
 # https://docs.pytorch.org/tutorials/intermediate/char_rnn_classification_tutorial.html
 
-model_type = "RNN"
+model_type = input("Enter model type: ")
 
 class RNNModel(nn.Module):
     def __init__(self, input_dim=4, hidden_dim=32, layer_dim=1, output_dim=1):
@@ -88,79 +88,167 @@ batch_size = 32
 train_loader = DataLoader(train_dataset, batch_size=32)
 test_loader = DataLoader(test_dataset, batch_size=32)
 
-model = RNNModel()
-model = model.to(device)
+num_trains = 5
+all_training_accuracies = []
+all_testing_accuracies = []
 
+for train_num in range(num_trains):
+  print("Training model " + str(train_num+1))
 
-criterion = nn.BCEWithLogitsLoss()
-#optimizer = optim.SGD(model.parameters(), lr=0.01)
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+  model = RNNModel()
+  model = model.to(device)
 
-print("Training model")
+  criterion = nn.BCEWithLogitsLoss()
+  #optimizer = optim.SGD(model.parameters(), lr=0.01)
+  optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-training_accuracies = []
-testing_accuracies = []
-epochs = []
+  training_accuracies = []
+  testing_accuracies = []
+  epochs = []
 
-for epoch in range(300):
-  model.train()
+  for epoch in range(300):
+    model.train()
 
-  total_loss = 0
-  num_batches = 0
-  correct = 0
-  total = 0
-  for data in train_loader:
-    inputs, labels = data[0].to(device), data[1].to(device)
-    labels = labels.unsqueeze(1)
-    optimizer.zero_grad()
-    outputs = model(inputs)
-    loss = criterion(outputs, labels)
-    loss.backward()
-    optimizer.step()
-    total_loss += loss.item()
-    num_batches += 1
+    total_loss = 0
+    num_batches = 0
+    correct = 0
+    total = 0
+    for data in train_loader:
+      inputs, labels = data[0].to(device), data[1].to(device)
+      labels = labels.unsqueeze(1)
+      optimizer.zero_grad()
+      outputs = model(inputs)
+      loss = criterion(outputs, labels)
+      loss.backward()
+      optimizer.step()
+      total_loss += loss.item()
+      num_batches += 1
 
-    predictions = (torch.sigmoid(outputs) > 0.5).float()
-    correct += (predictions == labels).sum().item()
-    total += labels.size(0)
+      predictions = (torch.sigmoid(outputs) > 0.5).float()
+      correct += (predictions == labels).sum().item()
+      total += labels.size(0)
 
-  if epoch % 1 == 0:
-    print("Epoch: " + str(epoch))
-    epochs.append(epoch)
-    training_loss = total_loss/num_batches
-    accuracy = correct / total
-    training_accuracies.append(accuracy)
-    print(f"Training Loss: {training_loss:.4f}, Accuracy: {accuracy:.2%}")
+    if epoch % 1 == 0:
+      print("Epoch: " + str(epoch))
+      epochs.append(epoch)
+      training_loss = total_loss/num_batches
+      accuracy = correct / total
+      training_accuracies.append(accuracy)
+      print(f"Training Loss: {training_loss:.4f}, Accuracy: {accuracy:.2%}")
 
-    model.eval()
-    with torch.no_grad():
-        total_loss = 0
-        correct = 0
-        total = 0
-        for inputs, labels in test_loader:
-            inputs, labels = inputs.to(device), labels.to(device)
-            labels = labels.unsqueeze(1)
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            total_loss += loss.item()
+      model.eval()
+      with torch.no_grad():
+          total_loss = 0
+          correct = 0
+          total = 0
+          for inputs, labels in test_loader:
+              inputs, labels = inputs.to(device), labels.to(device)
+              labels = labels.unsqueeze(1)
+              outputs = model(inputs)
+              loss = criterion(outputs, labels)
+              total_loss += loss.item()
 
-            predictions = (torch.sigmoid(outputs) > 0.5).float()
-            correct += (predictions == labels).sum().item()
-            total += labels.size(0)
-        
-        accuracy = correct / total
-        testing_accuracies.append(accuracy)
-        print(f"Testing Loss: {total_loss / len(test_loader):.4f}, Accuracy: {correct / total:.2%}")
+              predictions = (torch.sigmoid(outputs) > 0.5).float()
+              correct += (predictions == labels).sum().item()
+              total += labels.size(0)
+          
+          accuracy = correct / total
+          testing_accuracies.append(accuracy)
+          print(f"Testing Loss: {total_loss / len(test_loader):.4f}, Accuracy: {correct / total:.2%}")
+
+  all_training_accuracies.append(training_accuracies)
+  all_testing_accuracies.append(testing_accuracies)
+
+# Convert lists to numpy arrays
+all_training_accuracies = np.array(all_training_accuracies)
+all_testing_accuracies = np.array(all_testing_accuracies)
+
+# Calculate mean and standard deviation for training accuracies
+mean_training_accuracies = np.mean(all_training_accuracies, axis=0)
+std_training_accuracies = np.std(all_training_accuracies, axis=0)
+lower_bound_training = mean_training_accuracies - std_training_accuracies
+upper_bound_training = mean_training_accuracies + std_training_accuracies
+
+# Calculate mean and standard deviation for testing accuracies
+mean_testing_accuracies = np.mean(all_testing_accuracies, axis=0)
+std_testing_accuracies = np.std(all_testing_accuracies, axis=0)
+lower_bound_testing = mean_testing_accuracies - std_testing_accuracies
+upper_bound_testing = mean_testing_accuracies + std_testing_accuracies
 
 plot = True
 
 if plot:
   x = epochs
-  y1 = training_accuracies
-  y2 = testing_accuracies
+  y1 = mean_training_accuracies
+  y2 = mean_testing_accuracies
 
-  plt.plot(x, y1, label="Training Accuracy")
-  plt.plot(x, y2, label="Testing Accuracy")
-  plt.legend()
+  # Plot mean accuracies
+  plt.plot(x, y1, label="Mean Training Accuracy", color="blue")
+  plt.plot(x, y2, label="Mean Testing Accuracy", color="orange")
 
-  plt.show()
+  # Fill between lower and upper bounds for training
+  plt.fill_between(
+      x, 
+      lower_bound_training, 
+      upper_bound_training, 
+      color="blue", 
+      alpha=0.2, 
+      label="Training Accuracy Bound 1 std dev"
+  )
+
+  # Fill between lower and upper bounds for testing
+  plt.fill_between(
+      x, 
+      lower_bound_testing, 
+      upper_bound_testing, 
+      color="orange", 
+      alpha=0.2, 
+      label="Testing Accuracy Bound 1 std dev"
+  )
+
+  # Add labels, legend, and show the plot
+  plt.xlabel("Epochs", fontsize=14)
+  plt.ylabel("Accuracy", fontsize=14)
+  plt.xticks(fontsize=13)
+  plt.yticks(fontsize=13)
+  plt.legend(fontsize=13)
+  plt.title("Training and Testing Accuracy for " + model_type, fontsize=14)
+  plt.grid(True)
+  plt.tight_layout()
+  #plt.show()
+  save_path = f"../results/gabor_{model_type.lower()}_2.png"
+  plt.savefig(save_path)
+
+# Calculate peak accuracies and the epochs they occurred
+peak_accuracies = []
+peak_epochs = []
+
+for run_accuracies in all_testing_accuracies:
+    peak_accuracy = np.max(run_accuracies)
+    peak_epoch = np.argmax(run_accuracies) + 1  # Add 1 to epoch because counting starts at 0
+    peak_accuracies.append(peak_accuracy)
+    peak_epochs.append(peak_epoch)
+
+# Calculate mean and standard deviation of peak accuracies
+mean_peak_accuracy = np.mean(peak_accuracies)
+std_peak_accuracy = np.std(peak_accuracies)
+
+# Calculate the average epoch of peak accuracies
+average_peak_epoch = np.mean(peak_epochs)
+
+# Prepare the output content
+output_content = [
+    f"Mean Peak Accuracy: {mean_peak_accuracy:.4f}",
+    f"Standard Deviation of Peak Accuracy: {std_peak_accuracy:.4f}",
+    f"Average Epoch of Peak Accuracy: {average_peak_epoch:.4f}",
+    "",
+    "Individual Peak Accuracies and Epochs:",
+]
+
+for i, (accuracy, epoch) in enumerate(zip(peak_accuracies, peak_epochs)):
+    output_content.append(f"Run {i + 1}: Peak Accuracy = {accuracy:.4%}, Epoch = {epoch}")
+
+# Save the results to a file
+save_path = f"../results/gabor_{model_type.lower()}_2_results.txt"
+with open(save_path, "w") as f:
+    f.write("\n".join(output_content))
